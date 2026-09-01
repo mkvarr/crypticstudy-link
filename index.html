@@ -3,20 +3,24 @@
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#07070f;color:#8e8ea8;font-family:-apple-system,Inter,sans-serif;font-size:15px;text-align:center;padding:20px}a{color:#a08cff}.hide{display:none}h1{font-size:20px;color:#e6e6f0;margin:0 0 8px}</style>
 </head><body>
 <div id="go">Opening CrypticStudy&hellip; <a href="https://merajs-macbook-air.tailc75730.ts.net/">click here if nothing happens</a></div>
-<div id="down" class="hide"><h1>&#128564; The study Mac looks asleep</h1>Meraj&rsquo;s MacBook is probably unplugged or closed.<br>Text him to plug it in &mdash; this page retries by itself every 10 seconds.<br><br><a href="https://merajs-macbook-air.tailc75730.ts.net/">or try opening it directly &rarr;</a></div>
+<div id="down" class="hide"><h1>&#128564; The study Mac looks asleep</h1>Meraj&rsquo;s MacBook is probably unplugged or closed &mdash; text him.<br>This page retries by itself, or <a href="https://merajs-macbook-air.tailc75730.ts.net/">try opening it directly &rarr;</a></div>
 <script>
+// The Mac stamps a heartbeat into this repo every 5 min while healthy. We read it via the GitHub API
+// (CORS-open, works in every browser). Fresh beat: go. Stale: asleep card + retry. Unreadable: go anyway.
 var T="https://merajs-macbook-air.tailc75730.ts.net";
-function probe(){
-  var ctl=new AbortController(); var t=setTimeout(function(){ctl.abort()},5000);
-  fetch(T+"/health",{mode:"no-cors",cache:"no-store",signal:ctl.signal}).then(function(){
-    clearTimeout(t); location.replace(T+(location.pathname.replace(/^\/crypticstudy-link/,"")||"/")+location.search);
-  }).catch(function(){
-    clearTimeout(t);
-    document.getElementById("go").className="hide";
-    document.getElementById("down").className="";
-    setTimeout(probe,10000);
-  });
+var API="https://api.github.com/repos/mkvarr/crypticstudy-link/contents/beat.txt?ref=heartbeat";
+var FRESH=900, delay=15000;
+function go(){ location.replace(T+(location.pathname.replace(/^\/crypticstudy-link/,"")||"/")+location.search); }
+function card(){ document.getElementById("go").className="hide"; document.getElementById("down").className=""; }
+function check(){
+  fetch(API,{headers:{accept:"application/vnd.github.raw"},cache:"no-store"})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function(t){
+      var age=Math.floor(Date.now()/1000)-parseInt(t,10);
+      if(isNaN(age)||age<FRESH){ go(); } else { card(); delay=Math.min(delay*1.5,90000); setTimeout(check,delay); }
+    })
+    .catch(function(){ go(); });
 }
-probe();
+check();
 </script>
 </body></html>
