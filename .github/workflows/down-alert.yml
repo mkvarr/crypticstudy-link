@@ -1,0 +1,29 @@
+name: study-server-down-alert
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions:
+  issues: write
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare heartbeat age, open/close the alert issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          beat=$(gh api "repos/${{ github.repository }}/contents/beat.txt?ref=heartbeat" -H "Accept: application/vnd.github.raw" 2>/dev/null || echo 0)
+          age=$(( $(date +%s) - beat ))
+          echo "heartbeat age: ${age}s"
+          open=$(gh issue list -R ${{ github.repository }} --label down-alert --state open --json number --jq '.[0].number')
+          if [ "$age" -gt 1200 ]; then
+            if [ -z "$open" ]; then
+              gh issue create -R ${{ github.repository }} --label down-alert \
+                --title "🔴 CrypticStudy study server is DOWN (no heartbeat for $((age/60)) min)" \
+                --body "The MacBook is asleep, offline, or the server died. Wake it / plug it in. This issue closes itself when the heartbeat returns."
+            fi
+          else
+            if [ -n "$open" ]; then gh issue close -R ${{ github.repository }} "$open" -c "Heartbeat is back — server is up."; fi
+          fi
